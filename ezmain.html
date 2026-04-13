@@ -1,0 +1,105 @@
+﻿<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <title>EZCRM - Main</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Pretendard', 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; }
+        
+        /* 🔒 텍스트 선택 및 모바일 꾹 누르기 메뉴 차단 */
+        body { 
+            min-height: 100vh; background-color: #f4f7f6; display: flex; flex-direction: column; -webkit-font-smoothing: antialiased; 
+            -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none;
+            -webkit-touch-callout: none;
+        }
+        
+        .nc-wrap { flex: 1; display: flex; align-items: center; justify-content: center; padding: 40px 20px; }
+        .nc-app-wrap { width: 100%; max-width: 1000px; }
+        
+        .nc-mainlink-logo { text-align: center; margin-bottom: 40px; }
+        .nc-mainlink-logo h1 { font-size: 50px; color: #0b1625; letter-spacing: 3px; font-weight: 900; }
+        .nc-mainlink-logo p { color: #0ea5e9; font-size: 16px; margin-top: 10px; font-weight: bold; letter-spacing: 1px; }
+        
+        .nc-mainlink-box { display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; }
+        
+        .nc-mainlink-item { 
+            position: relative; width: 100%; max-width: 300px; height: 160px; 
+            border-radius: 20px; box-shadow: 0 8px 15px rgba(0,0,0,0.1); overflow: hidden;
+            transform: translateZ(0); will-change: transform;
+            transition: transform 0.15s ease-out, box-shadow 0.15s ease-out;
+        }
+        
+        .nc-mainlink-item.nc-mainlink-1 { background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); }
+        .nc-mainlink-item.nc-mainlink-2 { background: linear-gradient(135deg, #FF416C 0%, #FF4B2B 100%); }
+        .nc-mainlink-item.nc-mainlink-3 { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); }
+        
+        .nc-mainlink-item a { 
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            width: 100%; height: 100%; color: #fff; font-size: 28px; font-weight: bold; text-decoration: none; 
+            -webkit-tap-highlight-color: transparent; 
+        }
+        .nc-mainlink-item a span { font-size: 14px; font-weight: normal; margin-top: 5px; opacity: 0.9; }
+        .nc-mainlink-item a .arrow { display: none; font-size: 20px; margin-top: 10px; }
+        .nc-mainlink-item:active { transform: scale(0.96); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+
+        .nc-footer { width: 100%; padding: 30px 20px; background-color: #0b1625; text-align: center; }
+        .nc-footer .nc-footer-logo { color: #fff; font-size: 24px; font-weight: 900; letter-spacing: 2px; margin-bottom: 10px; }
+        .nc-footer .nc-footer-text1 { font-size: 13px; line-height: 1.6; color: #787b80; margin-bottom: 10px; }
+        .nc-footer .nc-footer-text2 { font-size: 12px; color: #787b80; }
+
+        @media (min-width: 768px) {
+            .nc-mainlink-logo { margin-bottom: 60px; }
+            .nc-mainlink-logo h1 { font-size: 65px; letter-spacing: 5px; }
+            .nc-mainlink-logo p { font-size: 20px; letter-spacing: 2px; }
+            .nc-mainlink-box { gap: 30px; }
+            .nc-mainlink-item { height: 360px; }
+            .nc-mainlink-item a { font-size: 36px; }
+            .nc-mainlink-item a span { font-size: 16px; margin-top: 15px; }
+            .nc-mainlink-item:hover { transform: translateY(-8px); box-shadow: 0 20px 30px rgba(0,0,0,0.15); cursor: pointer; }
+            .nc-mainlink-item:hover a .arrow { display: block; animation: bounce 1s infinite; }
+            
+            .nc-footer { text-align: left; padding: 40px 0; }
+            .nc-footer .nc-footer-wrap { max-width: 1000px; margin: 0 auto; padding-left: 200px; position: relative; }
+            .nc-footer .nc-footer-logo { position: absolute; top: 0; left: 0; font-size: 30px; margin-bottom: 0; }
+            .nc-footer .nc-footer-text1 { font-size: 15px; line-height: 26px; }
+        }
+        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(10px); } }
+    </style>
+
+    <script>
+        document.addEventListener('contextmenu', function(e) { e.preventDefault(); }, false);
+        document.addEventListener('selectstart', function(e) { e.preventDefault(); }, false);
+        document.addEventListener('dragstart', function(e) { e.preventDefault(); }, false);
+        document.addEventListener('keydown', function(e) {
+            if (e.keyCode === 123 || (e.ctrlKey && e.shiftKey && e.keyCode === 73) || (e.ctrlKey && e.shiftKey && e.keyCode === 74) || (e.ctrlKey && e.keyCode === 85)) { e.preventDefault(); return false; }
+        });
+    </script>
+</head>
+<body>
+<div class="nc-wrap">
+    <div class="nc-app-wrap">
+        <div class="nc-mainlink-logo">
+            <h1>EZCRM</h1>
+            <p>Smart Management System</p>
+        </div>
+
+        <div class="nc-mainlink-box">
+            <div class="nc-mainlink-1 nc-mainlink-item"><a href="ezcrm.html">본사 접속<span>Headquarters</span><div class="arrow">▼</div></a></div>
+            <div class="nc-mainlink-2 nc-mainlink-item"><a href="ezcrm.html">대행점 접속<span>Agency</span><div class="arrow">▼</div></a></div>
+            <div class="nc-mainlink-3 nc-mainlink-item"><a href="ezcrm.html">엔지니어 접속<span>Engineer</span><div class="arrow">▼</div></a></div>
+        </div>
+    </div>
+</div>
+
+<div class="nc-footer">
+    <div class="nc-footer-wrap">
+        <div class="nc-footer-logo">EZCRM</div>
+        <div class="nc-footer-text1">스마트 현장 관리 솔루션<br> support@ezcrm.co.kr</div>
+        <div class="nc-footer-text2">copyright (c) EZCRM. all rights reserved.</div>
+    </div>
+</div>
+</body>
+</html>
