@@ -261,8 +261,17 @@ var Util = {
             },
 
             forceOnlineReload: function() {
-                if(!(window.RemoteDB && RemoteDB.isReady())) return alert('온라인 DB가 아직 연결되지 않았습니다.');
-                RemoteDB.fetchOnce().then(function(remote){ if(remote) DB.applyRemoteData(remote.payload || remote, remote.meta || null); alert('온라인 JSON DB에서 다시 불러왔습니다.'); }).catch(function(err){ alert('온라인 불러오기 실패: ' + (err && err.message ? err.message : err)); });
+                if(!(window.RemoteDB && RemoteDB.isReady())) return alert('온라인/서버 DB가 아직 연결되지 않았습니다. Firebase 또는 REST 설정을 확인하세요.');
+                RemoteDB.fetchOnce().then(function(remote){
+                    var payload = null; var meta = null;
+                    if(remote && remote.payload) { payload = remote.payload; meta = remote.meta || null; }
+                    else if(remote && remote.data && remote.data.payload) { payload = remote.data.payload; meta = remote.data.meta || remote.meta || null; }
+                    else if(remote && remote.ok && remote.data && remote.data.payload) { payload = remote.data.payload; meta = remote.data.meta || remote.meta || null; }
+                    else if(remote && (remote.customers || remote.consults || remote.asReqs || remote.installs || remote.materials || remote.engineers || remote.users)) { payload = remote; meta = remote.meta || null; }
+                    if(!payload) throw new Error('서버 응답에 payload DB가 없습니다.');
+                    DB.applyRemoteData(payload, meta);
+                    alert('서버 JSON DB에서 다시 불러왔습니다.');
+                }).catch(function(err){ alert('서버 불러오기 실패: ' + (err && err.message ? err.message : err)); });
             },
             insert: function(table, record) { record.id = table + "_" + Date.now() + Math.floor(Math.random()*1000); record.date = Util.getLocalToday(); this.data[table].unshift(record); this.save(); },
             insertNoRender: function(table, record) { record.id = table + "_" + Date.now() + Math.floor(Math.random()*10000); record.date = Util.getLocalToday(); this.data[table].unshift(record); },

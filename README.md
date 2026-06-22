@@ -79,3 +79,7 @@ ezcrm_github_static/
 자세한 내용은 `CLIENT_AUTO_SERVER_PUSH_README.md`를 확인하세요.
 
 선택적으로 `server-example/` 폴더의 Node.js 수신 서버를 별도 서버에서 실행하면 Firebase 없이도 클라이언트 입력값을 자체 서버로 POST 받을 수 있습니다.
+
+## 2026-06-22 실시간 클라이언트 동기화 보강
+
+이번 버전은 `ezcrm.html`이 열리면 서버 JSON DB를 즉시 확인하고, 이후 Firebase 실시간 구독 또는 REST 서버 폴링으로 모든 클라이언트 화면과 DB가 동일하게 맞춰지도록 보강되었습니다. 자세한 내용은 `REALTIME_CLIENT_SYNC_FIX_README.md`를 참고하세요.

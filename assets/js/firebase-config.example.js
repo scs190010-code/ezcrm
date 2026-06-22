@@ -1,15 +1,14 @@
 /*
- * EZCRM Online JSON DB / Client Auto Server Push 설정 파일
+ * EZCRM Online JSON DB / Realtime Sync 설정 파일
  * ------------------------------------------------------------
  * A. Firebase Realtime Database 방식
- * 1) Firebase Console에서 Web App을 생성합니다.
- * 2) Realtime Database를 생성합니다.
- * 3) 아래 Firebase 값을 본인 프로젝트 값으로 교체합니다.
- * 4) enabled: true 로 변경하면 GitHub Pages에서도 온라인 JSON DB 동기화가 켜집니다.
+ * - GitHub Pages 같은 정적 호스팅에서도 모든 클라이언트가 같은 DB를 보게 하는 권장 방식입니다.
+ * - Firebase Console > Project settings > Web app 설정값을 아래에 넣고 enabled:true 로 바꾸세요.
+ * - databaseURL은 Realtime Database URL이어야 합니다.
  *
  * B. 자체 서버 REST API 방식
- * - Firebase 대신/추가로 직접 만든 서버 API에 입력값과 전체 DB 저장 이벤트를 POST 할 수 있습니다.
- * - 서버는 CORS에서 GitHub Pages 도메인을 허용해야 합니다.
+ * - Firebase 대신 직접 만든 서버를 사용할 경우 endpoint/readEndpoint를 설정합니다.
+ * - 서버는 POST 저장과 GET 읽기를 모두 지원해야 클라이언트 화면 동기화가 됩니다.
  */
 window.EZCRM_FIREBASE_CONFIG = {
   enabled: false,
@@ -23,16 +22,18 @@ window.EZCRM_FIREBASE_CONFIG = {
   path: "ezcrm/v36"
 };
 
-/* 자체 서버 자동전송 옵션. endpoint를 넣고 enabled:true로 바꾸면 모든 저장/입력 이벤트가 POST 됩니다. */
+/* 자체 서버 동기화 옵션. GET으로 전체 DB를 읽고 POST로 저장할 수 있어야 합니다. */
 window.EZCRM_SERVER_PUSH_CONFIG = {
   enabled: false,
   endpoint: "https://YOUR_SERVER_DOMAIN/api/ezcrm-sync",
+  readEndpoint: "https://YOUR_SERVER_DOMAIN/api/ezcrm-sync",
   method: "POST",
   token: "",
-  mode: "cors"
+  mode: "cors",
+  pollMs: 3000
 };
 
-/* 입력 중인 값 자동전송 옵션 */
+/* 입력 중인 값 자동전송 옵션: 저장 전 초안/이벤트 로그 용도입니다. 실제 화면 DB 동기화는 payload 실시간 수신으로 처리됩니다. */
 window.EZCRM_CLIENT_AUTOSYNC_CONFIG = {
   enabled: true,
   debounceMs: 900,
