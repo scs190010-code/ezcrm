@@ -65,3 +65,17 @@ ezcrm_github_static/
 처음 접속한 브라우저는 `localStorage`가 비어 있을 경우 이 데이터를 자동으로 불러옵니다. Firebase Realtime Database가 설정되어 있고 온라인 DB가 비어 있으면 이 데이터가 최초 온라인 JSON DB로 자동 업로드됩니다.
 
 기존 온라인 DB를 강제로 이 데이터로 교체하려면 CRM의 `데이터 백업/복원` 메뉴에서 `첨부 DB를 온라인 DB에 업로드` 버튼을 사용하세요.
+
+## 2026-06-22 추가: 클라이언트 입력값 자동 서버전송
+
+이번 패키지는 `assets/js/client-autosync.js`를 추가하여 각 클라이언트가 폼에 입력하는 값을 서버 쪽으로 자동 전송합니다.
+
+- 저장 버튼 전 입력 초안 자동전송
+- 저장/삭제/상태변경 시 전체 JSON DB 자동 업로드
+- Firebase Realtime Database의 `_clientInputs`, `_changeLog`, `_presence` 경로에 클라이언트별 로그 저장
+- 자체 REST API 서버 POST 전송 옵션 지원
+- 오프라인 상태에서는 로컬 대기열에 보관 후 재연결 시 재전송
+
+자세한 내용은 `CLIENT_AUTO_SERVER_PUSH_README.md`를 확인하세요.
+
+선택적으로 `server-example/` 폴더의 Node.js 수신 서버를 별도 서버에서 실행하면 Firebase 없이도 클라이언트 입력값을 자체 서버로 POST 받을 수 있습니다.

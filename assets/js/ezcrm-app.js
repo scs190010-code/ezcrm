@@ -126,7 +126,7 @@ var Util = {
                     DB.saveLocal();
                     UI.renderAll();
                     DB.setSyncStatus('📦 첨부 DB 반영 완료', 'online', 'EZCRM_DB_2026-06-22.json');
-                    if(options.uploadOnline && window.RemoteDB && RemoteDB.isReady()) {
+                    if(options.uploadOnline && window.RemoteDB && (RemoteDB.isReady() || (RemoteDB.hasCustomServer && RemoteDB.hasCustomServer()))) {
                         return RemoteDB.save(DB.data).then(function() { return seed; });
                     }
                     return seed;
@@ -194,13 +194,17 @@ var Util = {
                     UI.renderAll();
                     DB.setSyncStatus('💻 로컬 저장 모드', 'local', 'Firebase 설정 전');
 
-                    if(window.RemoteDB && RemoteDB.isEnabled()) {
-                        DB.setSyncStatus('🔄 온라인 DB 연결 중', 'syncing', 'Firebase Realtime Database');
+                    if(window.RemoteDB && RemoteDB.hasServerTarget && RemoteDB.hasServerTarget()) {
+                        DB.setSyncStatus('🔄 서버 연결 준비 중', 'syncing', 'Firebase/REST Server');
                         RemoteDB.connect({
                             initialData: DB.data,
                             onStatus: function(label, tone, detail){ DB.setSyncStatus(label, tone, detail); },
                             onRemoteData: function(remoteData, meta){ DB.applyRemoteData(remoteData, meta); }
                         });
+                    }
+
+                    if(window.ClientAutoSync && ClientAutoSync.init) {
+                        ClientAutoSync.init();
                     }
                 };
 
@@ -237,22 +241,22 @@ var Util = {
                     this.ensureDefaultAdmin();
                     this.saveLocal();
                     UI.renderAll();
-                    if(!this.isApplyingRemote && window.RemoteDB && RemoteDB.isReady()) {
-                        this.setSyncStatus('🔄 온라인 DB 저장 중', 'syncing', '변경사항 업로드');
+                    if(!this.isApplyingRemote && window.RemoteDB && (RemoteDB.isReady() || (RemoteDB.hasCustomServer && RemoteDB.hasCustomServer()))) {
+                        this.setSyncStatus('🔄 서버 자동 저장 중', 'syncing', '변경사항 업로드');
                         RemoteDB.save(this.data).catch(function(err){
-                            DB.setSyncStatus('⚠️ 온라인 저장 실패', 'error', (err && err.message) ? err.message : '권한/설정 확인');
+                            DB.setSyncStatus('⚠️ 서버 자동 저장 실패', 'error', (err && err.message) ? err.message : '권한/설정 확인');
                         });
                     }
                 } catch(e) { alert('저장 실패! 사진 용량이 초과되었습니다.'); }
             },
 
             forceOnlineSave: function() {
-                if(!(window.RemoteDB && RemoteDB.isReady())) return alert('온라인 DB가 아직 연결되지 않았습니다. assets/js/firebase-config.js 설정을 확인하세요.');
-                RemoteDB.save(this.data).then(function(){ alert('현재 브라우저 데이터를 온라인 JSON DB에 업로드했습니다.'); }).catch(function(err){ alert('온라인 업로드 실패: ' + (err && err.message ? err.message : err)); });
+                if(!(window.RemoteDB && (RemoteDB.isReady() || (RemoteDB.hasCustomServer && RemoteDB.hasCustomServer())))) return alert('서버가 아직 연결되지 않았습니다. assets/js/firebase-config.js 설정을 확인하세요.');
+                RemoteDB.save(this.data).then(function(){ alert('현재 브라우저 데이터를 서버로 업로드했습니다.'); }).catch(function(err){ alert('서버 업로드 실패: ' + (err && err.message ? err.message : err)); });
             },
 
             uploadBundledSeedOnline: function() {
-                if(!(window.RemoteDB && RemoteDB.isReady())) return alert('온라인 DB가 아직 연결되지 않았습니다. 먼저 Firebase 설정과 접속 상태를 확인하세요.');
+                if(!(window.RemoteDB && (RemoteDB.isReady() || (RemoteDB.hasCustomServer && RemoteDB.hasCustomServer())))) return alert('서버가 아직 연결되지 않았습니다. 먼저 Firebase/REST 설정과 접속 상태를 확인하세요.');
                 this.restoreBundledSeed(true);
             },
 
