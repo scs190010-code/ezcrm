@@ -18,6 +18,14 @@
     return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') + ':' + String(d.getSeconds()).padStart(2, '0');
   }
 
+
+  function hasBusinessData(data) {
+    data = data || {};
+    return ['customers', 'consults', 'asReqs', 'installs', 'materials', 'engineers'].some(function(k) {
+      return Array.isArray(data[k]) && data[k].length > 0;
+    });
+  }
+
   var RemoteDB = {
     app: null,
     ref: null,
@@ -61,12 +69,22 @@
         this.ref.on('value', function(snapshot) {
           var value = snapshot.val();
           if(value && value.payload) {
+            if(!hasBusinessData(value.payload) && !RemoteDB.seeded && hasBusinessData(options.initialData)) {
+              RemoteDB.seeded = true;
+              RemoteDB.save(options.initialData);
+              return;
+            }
             RemoteDB.onRemoteData(value.payload, value.meta || {});
             RemoteDB.onStatus('🟢 온라인 JSON DB 동기화 완료', 'online', '수신 ' + nowText());
           } else if(value && (value.customers || value.consults || value.asReqs || value.installs || value.materials || value.engineers || value.users)) {
+            if(!hasBusinessData(value) && !RemoteDB.seeded && hasBusinessData(options.initialData)) {
+              RemoteDB.seeded = true;
+              RemoteDB.save(options.initialData);
+              return;
+            }
             RemoteDB.onRemoteData(value, {});
             RemoteDB.onStatus('🟢 온라인 JSON DB 동기화 완료', 'online', '구형 JSON 수신 ' + nowText());
-          } else if(!RemoteDB.seeded && options.initialData) {
+          } else if(!RemoteDB.seeded && hasBusinessData(options.initialData)) {
             RemoteDB.seeded = true;
             RemoteDB.save(options.initialData);
           }

@@ -1,0 +1,14 @@
+{
+  "sourceFile": "EZCRM_DB_2026-06-22.json",
+  "reflectedAt": "2026-06-22",
+  "counts": {
+    "customers": 4,
+    "consults": 1,
+    "asReqs": 3,
+    "installs": 4,
+    "materials": 4,
+    "engineers": 6,
+    "users": 1
+  },
+  "sha256": "55c2f390a11fd511216b2372608989b0a03cdc1257aa89bc3ebd59165f6769e0"
+}

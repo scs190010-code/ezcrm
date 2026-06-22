@@ -23,7 +23,7 @@ var Util = {
 
             normalizeData: function(parsed) {
                 parsed = parsed || {};
-                return {
+                var out = {
                     customers: Array.isArray(parsed.customers) ? parsed.customers : [],
                     consults: Array.isArray(parsed.consults) ? parsed.consults : [],
                     asReqs: Array.isArray(parsed.asReqs) ? parsed.asReqs : [],
@@ -32,12 +32,113 @@ var Util = {
                     engineers: Array.isArray(parsed.engineers) ? parsed.engineers : [],
                     users: Array.isArray(parsed.users) ? parsed.users : []
                 };
+
+                // 업로드 DB 호환 변환: 구버전 addr → 현재 UI addr1/addr2, 설치 품목 → usedMaterials 등
+                out.customers = out.customers.map(function(c) {
+                    c = c || {};
+                    if(!c.addr1 && c.addr) c.addr1 = c.addr;
+                    if(!c.addr2) c.addr2 = '';
+                    if(!c.pic) c.pic = '';
+                    if(!c.memo) c.memo = '';
+                    if(!c.tel) c.tel = '';
+                    return c;
+                });
+                out.engineers = out.engineers.map(function(e) {
+                    e = e || {};
+                    if(!e.affil) e.affil = '본사';
+                    if(!e.memo) e.memo = '';
+                    if(!e.dept) e.dept = '';
+                    if(!e.tel) e.tel = '';
+                    return e;
+                });
+                out.materials = out.materials.map(function(m) {
+                    m = m || {};
+                    if(typeof m.qty === 'undefined') m.qty = 0;
+                    if(typeof m.price === 'undefined') m.price = 0;
+                    if(!m.memo) m.memo = '';
+                    if(!Array.isArray(m.attachedFiles)) m.attachedFiles = [];
+                    return m;
+                });
+                out.asReqs = out.asReqs.map(function(a) {
+                    a = a || {};
+                    if(!Array.isArray(a.attachedFiles)) a.attachedFiles = [];
+                    if(!Array.isArray(a.usedMaterials)) a.usedMaterials = [];
+                    if(!a.signature) a.signature = '';
+                    if(!a.status) a.status = '접수완료';
+                    if(!a.settlementStatus) a.settlementStatus = '정산대기';
+                    if(typeof a.laborCost === 'undefined') a.laborCost = 0;
+                    if(typeof a.otherCost === 'undefined') a.otherCost = 0;
+                    if(!a.processDetail) a.processDetail = '';
+                    if(!a.memo) a.memo = '';
+                    if(!a.costType) a.costType = '무상';
+                    return a;
+                });
+                out.installs = out.installs.map(function(ins) {
+                    ins = ins || {};
+                    if(!Array.isArray(ins.attachedFiles)) ins.attachedFiles = [];
+                    if(!Array.isArray(ins.usedMaterials)) {
+                        ins.usedMaterials = ins.matName ? [{ name: ins.matName, qty: ins.qty || 1, status: '사용' }] : [];
+                    }
+                    if(!ins.signature) ins.signature = '';
+                    if(!ins.status) ins.status = '접수대기';
+                    if(!ins.settlementStatus) ins.settlementStatus = '정산대기';
+                    if(typeof ins.laborCost === 'undefined') ins.laborCost = 0;
+                    if(typeof ins.otherCost === 'undefined') ins.otherCost = 0;
+                    if(!ins.memo) ins.memo = '';
+                    return ins;
+                });
+                out.consults = out.consults.map(function(cs) {
+                    cs = cs || {};
+                    if(!cs.worker) cs.worker = '';
+                    if(!cs.memo) cs.memo = '';
+                    return cs;
+                });
+                return out;
             },
 
             ensureDefaultAdmin: function() {
                 if(!this.data.users || this.data.users.length === 0) {
                     this.data.users = [{id: "U_ADMIN", loginId: "admin", pw: "admin123", name: "최고관리자", dept: "시스템관리부", role: "관리자"}];
                 }
+            },
+
+            hasBusinessData: function(data) {
+                data = data || this.data || {};
+                return ['customers', 'consults', 'asReqs', 'installs', 'materials', 'engineers'].some(function(k) {
+                    return Array.isArray(data[k]) && data[k].length > 0;
+                });
+            },
+
+            loadBundledSeed: function() {
+                if(!window.fetch) return Promise.resolve(null);
+                return fetch('data/seed.json?v=20260622-db-reflected', { cache: 'no-store' })
+                    .then(function(res) { if(!res.ok) throw new Error('seed.json 파일을 찾을 수 없습니다.'); return res.json(); })
+                    .then(function(seed) { return DB.normalizeData(seed); })
+                    .catch(function(err) { console.warn('[EZCRM] bundled seed load failed:', err); return null; });
+            },
+
+            applyBundledSeed: function(options) {
+                options = options || {};
+                return this.loadBundledSeed().then(function(seed) {
+                    if(!seed || !DB.hasBusinessData(seed)) throw new Error('반영할 기본 DB 데이터가 없습니다.');
+                    DB.data = seed;
+                    DB.ensureDefaultAdmin();
+                    DB.saveLocal();
+                    UI.renderAll();
+                    DB.setSyncStatus('📦 첨부 DB 반영 완료', 'online', 'EZCRM_DB_2026-06-22.json');
+                    if(options.uploadOnline && window.RemoteDB && RemoteDB.isReady()) {
+                        return RemoteDB.save(DB.data).then(function() { return seed; });
+                    }
+                    return seed;
+                });
+            },
+
+            restoreBundledSeed: function(uploadOnline) {
+                var msg = uploadOnline ? '첨부 DB를 현재 화면과 온라인 JSON DB에 다시 반영할까요?' : '첨부 DB를 현재 브라우저 데이터에 다시 반영할까요?';
+                if(!confirm(msg + '\n기존 브라우저 데이터는 덮어쓰기 됩니다.')) return;
+                this.applyBundledSeed({ uploadOnline: !!uploadOnline })
+                    .then(function(){ alert(uploadOnline ? '첨부 DB를 화면과 온라인 DB에 반영했습니다.' : '첨부 DB를 화면에 반영했습니다.'); })
+                    .catch(function(err){ alert('첨부 DB 반영 실패: ' + (err && err.message ? err.message : err)); });
             },
 
             loadLocal: function() {
@@ -88,16 +189,36 @@ var Util = {
                 this.loadLocal();
                 this.initDateDefaults();
                 UI.viewMode = { asReqs: 'card', installs: 'card', customers: 'card', consults: 'card', materials: 'card' };
-                UI.renderAll();
-                this.setSyncStatus('💻 로컬 저장 모드', 'local', 'Firebase 설정 전');
 
-                if(window.RemoteDB && RemoteDB.isEnabled()) {
-                    this.setSyncStatus('🔄 온라인 DB 연결 중', 'syncing', 'Firebase Realtime Database');
-                    RemoteDB.connect({
-                        initialData: this.data,
-                        onStatus: function(label, tone, detail){ DB.setSyncStatus(label, tone, detail); },
-                        onRemoteData: function(remoteData, meta){ DB.applyRemoteData(remoteData, meta); }
+                var continueBoot = function() {
+                    UI.renderAll();
+                    DB.setSyncStatus('💻 로컬 저장 모드', 'local', 'Firebase 설정 전');
+
+                    if(window.RemoteDB && RemoteDB.isEnabled()) {
+                        DB.setSyncStatus('🔄 온라인 DB 연결 중', 'syncing', 'Firebase Realtime Database');
+                        RemoteDB.connect({
+                            initialData: DB.data,
+                            onStatus: function(label, tone, detail){ DB.setSyncStatus(label, tone, detail); },
+                            onRemoteData: function(remoteData, meta){ DB.applyRemoteData(remoteData, meta); }
+                        });
+                    }
+                };
+
+                // 새 브라우저/처음 접속자에게는 첨부된 JSON DB를 기본 데이터로 자동 반영
+                if(!this.hasBusinessData()) {
+                    this.loadBundledSeed().then(function(seed) {
+                        if(seed && DB.hasBusinessData(seed)) {
+                            DB.data = seed;
+                            DB.ensureDefaultAdmin();
+                            DB.saveLocal();
+                            DB.setSyncStatus('📦 첨부 DB 자동 반영', 'online', 'EZCRM_DB_2026-06-22.json');
+                        }
+                        continueBoot();
                     });
+                } else {
+                    this.data = this.normalizeData(this.data);
+                    this.ensureDefaultAdmin();
+                    continueBoot();
                 }
             },
 
@@ -128,6 +249,11 @@ var Util = {
             forceOnlineSave: function() {
                 if(!(window.RemoteDB && RemoteDB.isReady())) return alert('온라인 DB가 아직 연결되지 않았습니다. assets/js/firebase-config.js 설정을 확인하세요.');
                 RemoteDB.save(this.data).then(function(){ alert('현재 브라우저 데이터를 온라인 JSON DB에 업로드했습니다.'); }).catch(function(err){ alert('온라인 업로드 실패: ' + (err && err.message ? err.message : err)); });
+            },
+
+            uploadBundledSeedOnline: function() {
+                if(!(window.RemoteDB && RemoteDB.isReady())) return alert('온라인 DB가 아직 연결되지 않았습니다. 먼저 Firebase 설정과 접속 상태를 확인하세요.');
+                this.restoreBundledSeed(true);
             },
 
             forceOnlineReload: function() {
