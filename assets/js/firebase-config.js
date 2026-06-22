@@ -11,7 +11,7 @@
  * - 서버는 POST 저장과 GET 읽기를 모두 지원해야 클라이언트 화면 동기화가 됩니다.
  */
 window.EZCRM_FIREBASE_CONFIG = {
-  enabled: true,
+  enabled: false,
   apiKey: "YOUR_FIREBASE_API_KEY",
   authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
   databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
@@ -24,7 +24,7 @@ window.EZCRM_FIREBASE_CONFIG = {
 
 /* 자체 서버 동기화 옵션. GET으로 전체 DB를 읽고 POST로 저장할 수 있어야 합니다. */
 window.EZCRM_SERVER_PUSH_CONFIG = {
-  enabled: true,
+  enabled: false,
   endpoint: "https://YOUR_SERVER_DOMAIN/api/ezcrm-sync",
   readEndpoint: "https://YOUR_SERVER_DOMAIN/api/ezcrm-sync",
   method: "POST",
