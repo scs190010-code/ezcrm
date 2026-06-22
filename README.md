@@ -1,27 +1,47 @@
-# EZCRM GitHub Pages Static Edition
+# EZCRM GitHub Pages Static + Online JSON DB Edition
 
-첨부된 `ezmain(1).html`, `ezcrm(1).html`을 GitHub Pages 정적 호스팅에 맞게 분리한 버전입니다.
+첨부된 `ezmain(1).html`, `ezcrm(1).html`을 GitHub Pages 정적 호스팅 구조로 분리하고, Firebase Realtime Database 기반 온라인 JSON DB 동기화 계층을 추가한 버전입니다.
 
 ## 구성
 
 ```text
-ezcrm_github_static/
+ezcrm_github_static_online_jsondb/
 ├─ index.html              # GitHub Pages 기본 진입 페이지 / EZCRM 포털
 ├─ ezmain.html             # 기존 링크 호환용 포털 별칭
 ├─ ezcrm.html              # 실제 CRM 단일 페이지 앱
 ├─ .nojekyll               # GitHub Pages Jekyll 처리 비활성화
+├─ README.md
+├─ ONLINE_JSON_DB_README.md
+├─ DEPLOY_CHECKLIST.md
+├─ SOURCE_ANALYSIS.md
+├─ PROJECT_ANALYSIS.json
+├─ docs/
+│  └─ FIREBASE_REALTIME_DB_SETUP.md
+├─ data/
+│  └─ seed.json
 └─ assets/
    ├─ css/
-   │  ├─ portal.css        # 포털 CSS
-   │  └─ ezcrm.css         # CRM 앱 CSS
+   │  ├─ portal.css
+   │  └─ ezcrm.css
    ├─ js/
-   │  ├─ portal.js         # 포털 보호/상호작용 스크립트
-   │  ├─ security.js       # CRM 보호/상호작용 스크립트
-   │  └─ ezcrm-app.js      # CRM 업무 로직
-   └─ img/                 # 향후 이미지 자산 위치
+   │  ├─ portal.js
+   │  ├─ security.js
+   │  ├─ firebase-config.js
+   │  ├─ firebase-config.example.js
+   │  ├─ remote-db.js
+   │  └─ ezcrm-app.js
+   └─ img/
 ```
 
-## 배포 방법
+## 핵심 변경
+
+- 기존 로컬 저장 방식은 유지했습니다.
+- `assets/js/firebase-config.js` 설정 전에는 기존처럼 브라우저 `localStorage`에 저장됩니다.
+- Firebase 설정 후 `enabled: true`로 바꾸면 모든 접속자가 같은 온라인 JSON DB를 실시간 공유합니다.
+- 우측 하단에 온라인/로컬 저장 상태 배지가 표시됩니다.
+- `데이터 백업/복원` 메뉴에 온라인 JSON DB 상태, 현재 데이터 업로드, 온라인 DB 새로고침 버튼을 추가했습니다.
+
+## GitHub Pages 배포 방법
 
 1. 이 폴더의 전체 파일을 GitHub 저장소 루트에 업로드합니다.
 2. GitHub 저장소에서 **Settings → Pages**로 이동합니다.
@@ -29,22 +49,28 @@ ezcrm_github_static/
 4. Branch를 `main`, Folder를 `/root`로 선택하고 저장합니다.
 5. 배포 주소는 보통 `https://계정명.github.io/저장소명/` 형태입니다.
 
+## 온라인 JSON DB 설정
+
+자세한 설정은 `docs/FIREBASE_REALTIME_DB_SETUP.md`를 보세요.
+핵심은 `assets/js/firebase-config.js`에서 Firebase Web App 값을 넣고 `enabled: true`로 바꾸는 것입니다.
+
+```js
+window.EZCRM_FIREBASE_CONFIG = {
+  enabled: true,
+  apiKey: "...",
+  authDomain: "...firebaseapp.com",
+  databaseURL: "https://...-default-rtdb.firebaseio.com",
+  projectId: "...",
+  storageBucket: "...appspot.com",
+  messagingSenderId: "...",
+  appId: "...",
+  path: "ezcrm/v36"
+};
+```
+
 ## 주의사항
 
-- 현재 버전은 서버 없이 동작하는 정적 웹앱입니다.
-- 고객/A/S/설치/자재 데이터는 브라우저 `localStorage`에 저장됩니다.
-- 다른 PC나 다른 브라우저와 자동 동기화되지는 않습니다.
-- 첨부 사진과 서명은 Base64 형태로 브라우저 저장소에 들어가므로, 너무 많은 이미지를 저장하면 용량 제한이 발생할 수 있습니다.
-- 외부 CDN 의존성: Tailwind CDN, Daum 우편번호 API, Chart.js, Pretendard 웹폰트.
-- GitHub Pages에서 Daum 우편번호 API와 Chart.js는 인터넷 연결이 가능한 상태에서 작동합니다.
-
-## 운영형 확장 권장
-
-정적 호스팅 후 실제 운영형으로 확장하려면 다음을 추가하는 것이 좋습니다.
-
-- Firebase/Supabase 같은 서버리스 DB 연동
-- 로그인/권한 분리: 본사, 대리점, 엔지니어
-- 이미지 파일 저장소: Firebase Storage, Supabase Storage, S3 등
-- 데이터 백업 자동화
-- 민감정보 접근 제어 및 개인정보 처리방침
-```
+- GitHub Pages 자체는 정적 호스팅이므로 JSON 파일을 직접 수정 저장할 수 없습니다. 온라인 업데이트는 Firebase Realtime Database가 담당합니다.
+- 공개 읽기/쓰기 규칙을 쓰면 접속자는 모두 데이터를 수정할 수 있습니다. 시연용에는 편하지만 실운영에는 인증/권한 규칙이 필요합니다.
+- 사진과 서명은 base64 문자열로 JSON DB에 저장됩니다. 데이터가 커지면 이미지 저장소 분리가 필요합니다.
+- 동시에 여러 명이 같은 데이터를 수정하면 마지막 저장값이 우선될 수 있습니다.

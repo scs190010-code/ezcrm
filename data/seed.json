@@ -1,0 +1,18 @@
+{
+  "customers": [],
+  "consults": [],
+  "asReqs": [],
+  "installs": [],
+  "materials": [],
+  "engineers": [],
+  "users": [
+    {
+      "id": "U_ADMIN",
+      "loginId": "admin",
+      "pw": "admin123",
+      "name": "최고관리자",
+      "dept": "시스템관리부",
+      "role": "관리자"
+    }
+  ]
+}

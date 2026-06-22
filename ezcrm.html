@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
@@ -473,9 +473,19 @@
 
             <section id="tab-backup" class="tab-content">
                 <h2 class="text-xl md:text-2xl font-bold mb-4">데이터 보관 및 복원</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div class="bg-white p-6 rounded-xl shadow-sm border text-center"><div class="text-4xl mb-3">💾</div><button onclick="DB.exportBackup()" class="bg-slate-800 text-white px-4 py-2 text-sm rounded font-bold w-full shadow">데이터 백업 (다운로드)</button></div>
                     <div class="bg-white p-6 rounded-xl shadow-sm border border-sky-200 text-center bg-sky-50"><div class="text-4xl mb-3">🔄</div><input type="file" id="backup-file" accept=".json" class="mb-3 block w-full text-xs bg-white p-1 rounded border"><button onclick="DB.importBackup()" class="bg-sky-600 text-white px-4 py-2 text-sm rounded font-bold w-full shadow">파일 복원 실행</button></div>
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-emerald-200 text-center bg-emerald-50">
+                        <div class="text-4xl mb-3">🌐</div>
+                        <h3 class="font-bold text-emerald-800 mb-2">온라인 JSON DB 동기화</h3>
+                        <div id="online-db-status" class="text-xs font-bold text-slate-700 bg-white border rounded-lg p-2 mb-3">설정 확인 중</div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button onclick="DB.forceOnlineSave()" class="bg-emerald-600 text-white px-3 py-2 text-xs rounded font-bold shadow">현재 데이터 업로드</button>
+                            <button onclick="DB.forceOnlineReload()" class="bg-white text-emerald-700 border border-emerald-300 px-3 py-2 text-xs rounded font-bold shadow">온라인 DB 새로고침</button>
+                        </div>
+                        <p class="text-[10px] text-emerald-700 mt-3 leading-relaxed">assets/js/firebase-config.js 설정 후 enabled:true 로 바꾸면 모든 접속자가 같은 JSON DB를 실시간 공유합니다.</p>
+                    </div>
                 </div>
             </section>
         </main>
@@ -519,6 +529,11 @@
         <img id="viewer-img" src="" class="max-w-full max-h-[90%] object-contain rounded shadow-2xl">
     </div>
 
+    <!-- Online JSON DB: Firebase Realtime Database adapter. Fill assets/js/firebase-config.js and set enabled:true -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
+    <script src="assets/js/firebase-config.js"></script>
+    <script src="assets/js/remote-db.js"></script>
     <script src="assets/js/ezcrm-app.js"></script>
 </body>
 </html>

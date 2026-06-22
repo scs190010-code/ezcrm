@@ -15,40 +15,125 @@ var Util = {
         var currentKakaoRec = null; var currentKakaoType = '';
 
         var DB = {
-            key: 'ezcrm_db_v36_secure', 
+            key: 'ezcrm_db_v36_secure',
             data: { customers: [], consults: [], asReqs: [], installs: [], materials: [], engineers: [], users: [] },
             sortState: { customers: {k:'', a:true}, materials: {k:'', a:true}, engineers: {k:'', a:true} },
+            isApplyingRemote: false,
+            lastRemoteMeta: null,
 
-            init: function() {
+            normalizeData: function(parsed) {
+                parsed = parsed || {};
+                return {
+                    customers: Array.isArray(parsed.customers) ? parsed.customers : [],
+                    consults: Array.isArray(parsed.consults) ? parsed.consults : [],
+                    asReqs: Array.isArray(parsed.asReqs) ? parsed.asReqs : [],
+                    installs: Array.isArray(parsed.installs) ? parsed.installs : [],
+                    materials: Array.isArray(parsed.materials) ? parsed.materials : [],
+                    engineers: Array.isArray(parsed.engineers) ? parsed.engineers : [],
+                    users: Array.isArray(parsed.users) ? parsed.users : []
+                };
+            },
+
+            ensureDefaultAdmin: function() {
+                if(!this.data.users || this.data.users.length === 0) {
+                    this.data.users = [{id: "U_ADMIN", loginId: "admin", pw: "admin123", name: "최고관리자", dept: "시스템관리부", role: "관리자"}];
+                }
+            },
+
+            loadLocal: function() {
                 try {
                     var stored = localStorage.getItem(this.key);
-                    if(stored) {
-                        var parsed = JSON.parse(stored);
-                        this.data.customers = parsed.customers || []; this.data.consults = parsed.consults || [];
-                        this.data.asReqs = parsed.asReqs || []; this.data.installs = parsed.installs || [];
-                        this.data.materials = parsed.materials || []; this.data.engineers = parsed.engineers || [];
-                        this.data.users = parsed.users || [];
-                    }
+                    if(stored) this.data = this.normalizeData(JSON.parse(stored));
                 } catch(e) {}
-                if(this.data.users.length === 0) { this.data.users.push({id: "U_ADMIN", loginId: "admin", pw: "admin123", name: "최고관리자", dept: "시스템관리부", role: "관리자"}); }
+                this.ensureDefaultAdmin();
+            },
 
+            saveLocal: function() {
+                localStorage.setItem(this.key, JSON.stringify(this.data));
+            },
+
+            setSyncStatus: function(label, tone, detail) {
+                var badge = document.getElementById('ezcrm-sync-badge');
+                if(!badge) {
+                    badge = document.createElement('div');
+                    badge.id = 'ezcrm-sync-badge';
+                    badge.className = 'fixed bottom-3 right-3 z-50 rounded-full px-3 py-2 text-[11px] md:text-xs font-bold shadow-lg border bg-white';
+                    document.body.appendChild(badge);
+                }
+                var cls = 'fixed bottom-3 right-3 z-50 rounded-full px-3 py-2 text-[11px] md:text-xs font-bold shadow-lg border ';
+                if(tone === 'online') cls += 'bg-emerald-50 text-emerald-700 border-emerald-200';
+                else if(tone === 'syncing') cls += 'bg-sky-50 text-sky-700 border-sky-200';
+                else if(tone === 'warning') cls += 'bg-amber-50 text-amber-700 border-amber-200';
+                else if(tone === 'error') cls += 'bg-rose-50 text-rose-700 border-rose-200';
+                else cls += 'bg-white text-slate-600 border-slate-200';
+                badge.className = cls;
+                badge.innerHTML = label + (detail ? '<span class="ml-1 font-normal opacity-80">' + detail + '</span>' : '');
+                var panel = document.getElementById('online-db-status');
+                if(panel) panel.innerHTML = label + (detail ? '<br><span class="text-slate-500 font-normal">' + detail + '</span>' : '');
+            },
+
+            initDateDefaults: function() {
                 var tdStr = Util.getLocalToday();
                 var dtDisp = document.getElementById('today-date-display'); if(dtDisp) dtDisp.innerText = tdStr.replace(/-/g, '. ');
                 var asSched = document.getElementById('as-schedule'); if(asSched) asSched.value = tdStr;
                 var inSched = document.getElementById('in-schedule'); if(inSched) inSched.value = tdStr;
                 var admSched = document.getElementById('adm-schedule'); if(admSched) admSched.value = tdStr;
-                
-                var csStart = document.getElementById('chart-start'); if(csStart) { var d = new Date(); d.setMonth(d.getMonth()-5); csStart.value = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
-                var csEnd = document.getElementById('chart-end'); if(csEnd) { var d = new Date(); csEnd.value = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
-
-                var dsStart = document.getElementById('dash-start'); if(dsStart) { var d = new Date(); d.setDate(1); dsStart.value = Util.getLocalToday().substring(0,8)+'01'; }
+                var csStart = document.getElementById('chart-start'); if(csStart) { var d1 = new Date(); d1.setMonth(d1.getMonth()-5); csStart.value = d1.getFullYear()+'-'+String(d1.getMonth()+1).padStart(2,'0'); }
+                var csEnd = document.getElementById('chart-end'); if(csEnd) { var d2 = new Date(); csEnd.value = d2.getFullYear()+'-'+String(d2.getMonth()+1).padStart(2,'0'); }
+                var dsStart = document.getElementById('dash-start'); if(dsStart) dsStart.value = Util.getLocalToday().substring(0,8)+'01';
                 var dsEnd = document.getElementById('dash-end'); if(dsEnd) dsEnd.value = tdStr;
-
-                UI.viewMode = { asReqs: 'card', installs: 'card', customers: 'card', consults: 'card', materials: 'card' };
-                
-                UI.renderAll();
             },
-            save: function() { try{ localStorage.setItem(this.key, JSON.stringify(this.data)); UI.renderAll(); } catch(e) { alert('저장 실패! 사진 용량이 초과되었습니다.'); } },
+
+            init: function() {
+                this.loadLocal();
+                this.initDateDefaults();
+                UI.viewMode = { asReqs: 'card', installs: 'card', customers: 'card', consults: 'card', materials: 'card' };
+                UI.renderAll();
+                this.setSyncStatus('💻 로컬 저장 모드', 'local', 'Firebase 설정 전');
+
+                if(window.RemoteDB && RemoteDB.isEnabled()) {
+                    this.setSyncStatus('🔄 온라인 DB 연결 중', 'syncing', 'Firebase Realtime Database');
+                    RemoteDB.connect({
+                        initialData: this.data,
+                        onStatus: function(label, tone, detail){ DB.setSyncStatus(label, tone, detail); },
+                        onRemoteData: function(remoteData, meta){ DB.applyRemoteData(remoteData, meta); }
+                    });
+                }
+            },
+
+            applyRemoteData: function(remoteData, meta) {
+                this.isApplyingRemote = true;
+                this.data = this.normalizeData(remoteData);
+                this.ensureDefaultAdmin();
+                this.lastRemoteMeta = meta || null;
+                try { this.saveLocal(); } catch(e) {}
+                UI.renderAll();
+                this.isApplyingRemote = false;
+            },
+
+            save: function() {
+                try {
+                    this.ensureDefaultAdmin();
+                    this.saveLocal();
+                    UI.renderAll();
+                    if(!this.isApplyingRemote && window.RemoteDB && RemoteDB.isReady()) {
+                        this.setSyncStatus('🔄 온라인 DB 저장 중', 'syncing', '변경사항 업로드');
+                        RemoteDB.save(this.data).catch(function(err){
+                            DB.setSyncStatus('⚠️ 온라인 저장 실패', 'error', (err && err.message) ? err.message : '권한/설정 확인');
+                        });
+                    }
+                } catch(e) { alert('저장 실패! 사진 용량이 초과되었습니다.'); }
+            },
+
+            forceOnlineSave: function() {
+                if(!(window.RemoteDB && RemoteDB.isReady())) return alert('온라인 DB가 아직 연결되지 않았습니다. assets/js/firebase-config.js 설정을 확인하세요.');
+                RemoteDB.save(this.data).then(function(){ alert('현재 브라우저 데이터를 온라인 JSON DB에 업로드했습니다.'); }).catch(function(err){ alert('온라인 업로드 실패: ' + (err && err.message ? err.message : err)); });
+            },
+
+            forceOnlineReload: function() {
+                if(!(window.RemoteDB && RemoteDB.isReady())) return alert('온라인 DB가 아직 연결되지 않았습니다.');
+                RemoteDB.fetchOnce().then(function(remote){ if(remote) DB.applyRemoteData(remote.payload || remote, remote.meta || null); alert('온라인 JSON DB에서 다시 불러왔습니다.'); }).catch(function(err){ alert('온라인 불러오기 실패: ' + (err && err.message ? err.message : err)); });
+            },
             insert: function(table, record) { record.id = table + "_" + Date.now() + Math.floor(Math.random()*1000); record.date = Util.getLocalToday(); this.data[table].unshift(record); this.save(); },
             insertNoRender: function(table, record) { record.id = table + "_" + Date.now() + Math.floor(Math.random()*10000); record.date = Util.getLocalToday(); this.data[table].unshift(record); },
             update: function(table, id, updatedRecord) { var index = this.data[table].findIndex(function(row) { return row.id === id; }); if(index !== -1) { for(var key in updatedRecord) { this.data[table][index][key] = updatedRecord[key]; } this.save(); } },

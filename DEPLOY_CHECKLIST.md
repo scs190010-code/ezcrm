@@ -1,10 +1,27 @@
-# GitHub Pages 빠른 배포 체크리스트
+# EZCRM 배포 체크리스트
 
-- [ ] 저장소 생성
-- [ ] 압축 해제 후 `index.html`, `ezcrm.html`, `assets/`를 저장소 루트에 업로드
-- [ ] Settings → Pages → Deploy from a branch 설정
-- [ ] Branch: `main`, Folder: `/root`
-- [ ] 배포 후 `index.html` 접속 확인
-- [ ] 포털의 본사/대리점/엔지니어 접속 버튼이 `ezcrm.html`로 이동하는지 확인
-- [ ] CRM 화면에서 대시보드, 고객관리, A/S, 설치, 자재관리 탭 클릭 확인
-- [ ] 테스트 데이터 저장 후 새로고침해 `localStorage` 유지 확인
+## GitHub Pages
+
+- [ ] 저장소 루트에 `index.html`, `ezcrm.html`, `assets/`가 있는지 확인
+- [ ] `.nojekyll` 파일 포함 확인
+- [ ] GitHub Settings → Pages → Deploy from branch 설정
+- [ ] 배포 URL에서 `index.html` 접속 확인
+- [ ] 포털에서 `본사/대행점/엔지니어 접속` 클릭 시 `ezcrm.html` 이동 확인
+
+## 온라인 JSON DB
+
+- [ ] Firebase 프로젝트 생성
+- [ ] Realtime Database 생성
+- [ ] `assets/js/firebase-config.js` 값 교체
+- [ ] `enabled: true`로 변경
+- [ ] Realtime Database Rules 설정
+- [ ] 브라우저 2개에서 고객 등록 후 실시간 반영 확인
+- [ ] 우측 하단 배지가 `온라인 JSON DB 연결됨`으로 표시되는지 확인
+
+## 운영 전 보강 권장
+
+- [ ] 기본 관리자 비밀번호 변경
+- [ ] Firebase Authentication 적용
+- [ ] 사용자 권한별 쓰기 규칙 적용
+- [ ] 사진/서명 Firebase Storage 분리 저장 검토
+- [ ] 정기 JSON 백업 다운로드 테스트
