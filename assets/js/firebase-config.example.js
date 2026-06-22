@@ -10,6 +10,10 @@
  * - Firebase 대신 직접 만든 서버를 사용할 경우 endpoint/readEndpoint를 설정합니다.
  * - 서버는 POST 저장과 GET 읽기를 모두 지원해야 클라이언트 화면 동기화가 됩니다.
  */
+// 기본 동기화 엔진: Firebase 사용자는 그대로 'firebase'를 유지하세요.
+// REST 자체 서버를 직접 운영할 때만 'rest'로 바꿉니다.
+window.EZCRM_SYNC_ENGINE = 'firebase';
+
 window.EZCRM_FIREBASE_CONFIG = {
   enabled: false,
   apiKey: "YOUR_FIREBASE_API_KEY",
@@ -24,7 +28,11 @@ window.EZCRM_FIREBASE_CONFIG = {
 
 /* 자체 서버 동기화 옵션. GET으로 전체 DB를 읽고 POST로 저장할 수 있어야 합니다. */
 window.EZCRM_SERVER_PUSH_CONFIG = {
+  // 중요: GitHub Pages 주소를 endpoint로 넣으면 Failed to fetch가 납니다.
+  // Firebase 방식이면 반드시 false로 두세요.
   enabled: false,
+  engine: 'rest',
+  forceRest: false,
   endpoint: "https://YOUR_SERVER_DOMAIN/api/ezcrm-sync",
   readEndpoint: "https://YOUR_SERVER_DOMAIN/api/ezcrm-sync",
   method: "POST",

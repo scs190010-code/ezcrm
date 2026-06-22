@@ -111,6 +111,15 @@
     init: function() {
       var c = cfg();
       if(this.initialized || !c.enabled) return;
+
+      // 서버 대상이 없으면 입력 초안을 계속 큐에 쌓지 않는다.
+      // Firebase 설정 전 업로드 테스트에서는 로컬 DB만 정상 작동하고,
+      // Firebase 설정 후에는 자동전송/실시간 동기화가 활성화된다.
+      if(!(global.RemoteDB && RemoteDB.hasServerTarget && RemoteDB.hasServerTarget())) {
+        this.showStatus('💻 서버 자동전송 비활성', 'Firebase 설정 전 · REST 서버 사용 안 함');
+        return;
+      }
+
       this.initialized = true;
 
       var self = this;

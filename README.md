@@ -1,3 +1,13 @@
+# EZCRM GitHub Pages Upload Ready Final
+
+이 버전은 REST 서버 `Failed to fetch` 오류 수정, 온라인 JSON DB 실시간 동기화 구조, 첨부 DB seed 반영을 포함한 업로드용 최종본입니다.
+
+압축을 풀어 나온 파일 전체를 GitHub Pages 저장소 루트에 업로드하세요.
+
+> 여러 클라이언트 실시간 동기화는 Firebase Realtime Database 설정값을 넣고 `enabled: true`로 전환해야 작동합니다. GitHub Pages만으로는 서버 DB 쓰기가 불가능합니다.
+
+---
+
 # EZCRM GitHub Pages Static Edition
 
 첨부된 `ezmain(1).html`, `ezcrm(1).html`을 GitHub Pages 정적 호스팅에 맞게 분리한 버전입니다.

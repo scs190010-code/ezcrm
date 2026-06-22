@@ -8,7 +8,24 @@
   function cfg() { return global.EZCRM_FIREBASE_CONFIG || {}; }
   function serverCfg() { return global.EZCRM_SERVER_PUSH_CONFIG || {}; }
 
-  function isPlaceholder(value) { return !value || String(value).indexOf('YOUR_') >= 0; }
+  function syncEngine() {
+    var engine = global.EZCRM_SYNC_ENGINE || cfg().engine || serverCfg().engine || 'firebase';
+    return String(engine || 'firebase').toLowerCase();
+  }
+
+  function isPlaceholder(value) {
+    if(!value) return true;
+    var s = String(value);
+    return s.indexOf('YOUR_') >= 0 || s.indexOf('YOUR-') >= 0 || s.indexOf('실제') >= 0 || s.indexOf('프로젝트ID') >= 0 || s.indexOf('YOUR_SERVER_DOMAIN') >= 0;
+  }
+
+  function isLikelyStaticHost(url) {
+    try {
+      var u = new URL(String(url), location.href);
+      var h = u.hostname.toLowerCase();
+      return /(^|\.)github\.io$/.test(h) || /(^|\.)githubusercontent\.com$/.test(h) || /(^|\.)netlify\.app$/.test(h) || /(^|\.)vercel\.app$/.test(h);
+    } catch(e) { return false; }
+  }
 
   function firebaseEnabled() {
     var c = cfg();
@@ -17,7 +34,21 @@
 
   function customServerEnabled() {
     var c = serverCfg();
-    return c.enabled === true && !!c.endpoint && /^https?:\/\//.test(String(c.endpoint));
+    if(c.enabled !== true) return false;
+
+    // Firebase와 REST를 동시에 켜면 REST 실패가 화면 동기화를 방해할 수 있으므로
+    // 기본 엔진(firebase)에서는 REST 폴링을 자동 차단한다. REST만 쓸 때는 engine:'rest' 또는 forceRest:true 사용.
+    if(firebaseEnabled() && syncEngine() !== 'rest' && c.forceRest !== true) return false;
+
+    var endpoint = c.endpoint || '';
+    var readEndpoint = c.readEndpoint || c.endpoint || '';
+    if(isPlaceholder(endpoint) || isPlaceholder(readEndpoint)) return false;
+    if(!/^https?:\/\//.test(String(endpoint)) || !/^https?:\/\//.test(String(readEndpoint))) return false;
+
+    // GitHub Pages, Netlify, Vercel 같은 정적 호스팅 URL은 REST 저장 서버가 아니다.
+    // 실제 API 서버를 쓰는 고급 사용자는 allowStaticHost:true 로 강제 허용 가능.
+    if(c.allowStaticHost !== true && (isLikelyStaticHost(endpoint) || isLikelyStaticHost(readEndpoint))) return false;
+    return true;
   }
 
   function nowText() {
@@ -255,7 +286,12 @@
       this.seeded = false;
 
       if(!firebaseEnabled() && !customServerEnabled()) {
-        this._emitStatus('💻 로컬 저장 모드', 'local', 'Firebase/서버 설정 전');
+        var sc = serverCfg();
+        if(sc && sc.enabled === true) {
+          this._emitStatus('💻 로컬 저장 모드', 'local', 'REST 설정 무시됨: 실제 API endpoint 또는 engine:\'rest\' 확인');
+        } else {
+          this._emitStatus('💻 로컬 저장 모드', 'local', 'Firebase/서버 설정 전');
+        }
         return;
       }
 
