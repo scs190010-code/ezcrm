@@ -1,0 +1,27 @@
+{
+  "source_files": [
+    "ezmain(1).html",
+    "ezcrm(1).html"
+  ],
+  "output_files": [
+    ".nojekyll",
+    "DEPLOY_CHECKLIST.md",
+    "README.md",
+    "assets/css/ezcrm.css",
+    "assets/css/portal.css",
+    "assets/js/ezcrm-app.js",
+    "assets/js/portal.js",
+    "assets/js/security.js",
+    "ezcrm.html",
+    "ezmain.html",
+    "index.html"
+  ],
+  "external_dependencies": [
+    "https://cdn.tailwindcss.com",
+    "https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js",
+    "https://cdn.jsdelivr.net/npm/chart.js",
+    "Pretendard CSS CDN"
+  ],
+  "storage": "Browser localStorage",
+  "static_hosting": "GitHub Pages compatible: no backend build step required"
+}
