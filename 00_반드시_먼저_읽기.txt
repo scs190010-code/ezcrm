@@ -1,0 +1,42 @@
+EZCRM 최종 업로드용 패키지
+==========================
+
+이 ZIP은 현재 확인된 Firebase 프로젝트 정보를 미리 반영한 버전입니다.
+
+확인된 Firebase 값
+- 프로젝트 ID: eco-precept-499606-b4
+- 프로젝트 번호: 216968504440
+
+압축을 풀어서 GitHub 저장소 scs190010-code/ezcrm 루트에 그대로 업로드하면 됩니다.
+
+중요: GitHub Pages는 웹파일만 올리는 곳이고, 여러 사용자가 같은 DB를 보려면 Firebase Realtime Database가 반드시 필요합니다.
+이 패키지는 웹앱 apiKey/appId 없이도 Firebase Realtime Database REST 방식으로 자동 연결을 시도합니다.
+
+대표님이 Firebase에서 해야 할 일
+1. Firebase 콘솔 왼쪽 메뉴에서 데이터베이스 및 스토리지 > Realtime Database 클릭
+2. 데이터베이스 만들기 클릭
+3. 위치 선택 후 테스트 모드로 생성
+4. Rules 탭에서 아래 규칙으로 임시 설정 후 게시
+
+{
+  "rules": {
+    "ezcrm": {
+      "v36": {
+        ".read": true,
+        ".write": true
+      }
+    }
+  }
+}
+
+정상 작동 확인
+- PC와 휴대폰에서 같은 GitHub Pages 주소의 ezcrm.html을 엽니다.
+- 한쪽에서 고객/A/S/설치 데이터를 저장합니다.
+- 다른 쪽 화면이 3초 안팎으로 자동 갱신되면 정상입니다.
+
+화면 하단 상태 메시지
+- 🟢 Firebase DB 확인 완료 / 저장 완료: 정상
+- ⚠️ Firebase DB 읽기 실패: Realtime Database가 아직 없거나, Rules가 막혔거나, DB URL이 다른 경우
+
+만약 계속 실패하면 Firebase 콘솔 Realtime Database 화면 상단에 보이는 DB URL을 복사해서
+assets/js/firebase-config.js 파일의 databaseURL에 그대로 넣으면 됩니다.

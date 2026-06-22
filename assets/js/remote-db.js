@@ -51,6 +51,83 @@
     return true;
   }
 
+
+  function firebaseRestEnabled() {
+    var c = cfg();
+    var engine = syncEngine();
+    if(c.enabled !== true) return false;
+    if(engine !== 'firebase-rest-auto' && engine !== 'firebase-rest' && engine !== 'firebase') return false;
+    if(firebaseEnabled() && engine === 'firebase') return false; // SDK 실시간 모드 우선
+    return !isPlaceholder(c.databaseURL) || !isPlaceholder(c.projectId);
+  }
+
+  function normalizeBaseUrl(url) {
+    url = String(url || '').trim();
+    if(!url) return '';
+    return url.replace(/\/+$/, '');
+  }
+
+  function getFirebaseRestCandidates() {
+    var c = cfg();
+    var list = [];
+    function add(u) {
+      u = normalizeBaseUrl(u);
+      if(u && list.indexOf(u) < 0 && /^https?:\/\//.test(u)) list.push(u);
+    }
+    add(c.databaseURL);
+    if(Array.isArray(c.databaseURLs)) c.databaseURLs.forEach(add);
+    var pid = c.projectId;
+    if(!isPlaceholder(pid)) {
+      add('https://' + pid + '-default-rtdb.firebaseio.com');
+      add('https://' + pid + '-default-rtdb.asia-southeast1.firebasedatabase.app');
+      add('https://' + pid + '-default-rtdb.asia-northeast3.firebasedatabase.app');
+      add('https://' + pid + '-default-rtdb.us-central1.firebasedatabase.app');
+      add('https://' + pid + '-default-rtdb.europe-west1.firebasedatabase.app');
+    }
+    return list;
+  }
+
+  function firebaseRestPath(suffix) {
+    var basePath = (cfg().path || 'ezcrm/v36').replace(/^\/+|\/+$/g, '');
+    suffix = String(suffix || '').replace(/^\/+|\/+$/g, '');
+    return basePath + (suffix ? '/' + suffix : '');
+  }
+
+  function firebaseRestUrl(baseUrl, suffix) {
+    return normalizeBaseUrl(baseUrl) + '/' + firebaseRestPath(suffix) + '.json';
+  }
+
+  function firebaseRestRequest(method, suffix, body, baseUrl) {
+    if(!global.fetch) return Promise.reject(new Error('fetch API is not available'));
+    var bases = baseUrl ? [normalizeBaseUrl(baseUrl)] : (RemoteDB.restBaseUrl ? [RemoteDB.restBaseUrl] : getFirebaseRestCandidates());
+    var idx = 0;
+    var lastErr = null;
+    function tryNext() {
+      if(idx >= bases.length) {
+        return Promise.reject(lastErr || new Error('Firebase Realtime Database URL을 찾지 못했습니다. Realtime Database 생성/URL/Rules를 확인하세요.'));
+      }
+      var b = bases[idx++];
+      var opts = { method: method, cache: 'no-store' };
+      if(body !== undefined) {
+        opts.headers = { 'Content-Type': 'application/json' };
+        opts.body = JSON.stringify(body);
+      }
+      return fetch(firebaseRestUrl(b, suffix), opts).then(function(res) {
+        if(!res.ok) throw new Error('Firebase REST HTTP ' + res.status + ' @ ' + b);
+        RemoteDB.restBaseUrl = b;
+        return res.json().catch(function(){ return { ok: true }; });
+      }).catch(function(err) {
+        lastErr = err;
+        return tryNext();
+      });
+    }
+    return tryNext();
+  }
+
+  function firebaseRestPushKey() {
+    return 'k_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10);
+  }
+
   function nowText() {
     var d = new Date();
     return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') + ':' + String(d.getSeconds()).padStart(2, '0');
@@ -218,6 +295,8 @@
     connected: false,
     firebaseConnected: false,
     customServerConnected: false,
+    firebaseRestConnected: false,
+    restBaseUrl: '',
     seeded: false,
     clientId: getClientId(),
     onStatus: function(){},
@@ -232,10 +311,10 @@
     isEnabled: firebaseEnabled,
     hasCustomServer: customServerEnabled,
 
-    hasServerTarget: function() { return firebaseEnabled() || customServerEnabled(); },
+    hasServerTarget: function() { return firebaseEnabled() || firebaseRestEnabled() || customServerEnabled(); },
 
     isReady: function() {
-      return !!this.ref || customServerEnabled();
+      return !!this.ref || !!this.restBaseUrl || firebaseRestEnabled() || customServerEnabled();
     },
 
     _emitStatus: function(label, tone, detail) {
@@ -285,7 +364,7 @@
       this.onRemoteData = options.onRemoteData || function(){};
       this.seeded = false;
 
-      if(!firebaseEnabled() && !customServerEnabled()) {
+      if(!firebaseEnabled() && !firebaseRestEnabled() && !customServerEnabled()) {
         var sc = serverCfg();
         if(sc && sc.enabled === true) {
           this._emitStatus('💻 로컬 저장 모드', 'local', 'REST 설정 무시됨: 실제 API endpoint 또는 engine:\'rest\' 확인');
@@ -296,6 +375,7 @@
       }
 
       if(firebaseEnabled()) this._connectFirebase(options);
+      else if(firebaseRestEnabled()) this._connectFirebaseRest(options);
       if(customServerEnabled()) this._connectCustomServer(options);
     },
 
@@ -317,7 +397,7 @@
 
         firebase.database().ref('.info/connected').on('value', function(snap) {
           RemoteDB.firebaseConnected = snap.val() === true;
-          RemoteDB.connected = RemoteDB.firebaseConnected || RemoteDB.customServerConnected;
+          RemoteDB.connected = RemoteDB.firebaseConnected || RemoteDB.firebaseRestConnected || RemoteDB.customServerConnected;
           if(RemoteDB.firebaseConnected) {
             RemoteDB._emitStatus('🟢 Firebase 서버 연결됨', 'online', '실시간 구독 ' + nowText());
             RemoteDB.pushPresence();
@@ -352,6 +432,41 @@
       }
     },
 
+
+    _connectFirebaseRest: function(options) {
+      var pollMs = Math.max(1500, parseInt(cfg().pollMs || 3000, 10));
+      this._emitStatus('🔄 Firebase REST 자동연결 준비', 'syncing', 'DB URL 자동 탐색 · ' + (pollMs / 1000) + '초 체크');
+      var poll = function(first) {
+        RemoteDB.pollFirebaseRest(options, first).catch(function(err) {
+          RemoteDB.firebaseRestConnected = false;
+          RemoteDB.connected = RemoteDB.firebaseConnected || RemoteDB.firebaseRestConnected || RemoteDB.customServerConnected;
+          RemoteDB._emitStatus('⚠️ Firebase DB 읽기 실패', 'warning', err && err.message ? err.message : 'Realtime Database 생성/Rules/URL 확인');
+        });
+      };
+      poll(true);
+      clearInterval(this.pollTimer);
+      this.pollTimer = setInterval(function(){ poll(false); }, pollMs);
+      global.addEventListener('visibilitychange', function() {
+        if(!document.hidden) poll(false);
+      });
+      global.addEventListener('online', function(){ poll(false); });
+    },
+
+    pollFirebaseRest: function(options, first) {
+      return firebaseRestRequest('GET', '', undefined).then(function(json) {
+        RemoteDB.firebaseRestConnected = true;
+        RemoteDB.connected = RemoteDB.firebaseConnected || RemoteDB.firebaseRestConnected || RemoteDB.customServerConnected;
+        var envelope = extractEnvelope(json);
+        var applied = RemoteDB._applyEnvelope(envelope, first ? 'firebase-rest-once' : 'firebase-rest-poll');
+        if(!applied && !hasBusinessData(envelope.payload)) RemoteDB._seedIfEmpty(options.initialData);
+        if(!applied && hasBusinessData(envelope.payload)) {
+          RemoteDB._emitStatus('🟢 Firebase DB 확인 완료', 'online', '변경 없음 ' + nowText());
+        }
+        if(global.ClientAutoSync && ClientAutoSync.flushQueue) ClientAutoSync.flushQueue();
+        return json;
+      });
+    },
+
     _connectCustomServer: function(options) {
       var c = serverCfg();
       var pollMs = Math.max(1500, parseInt(c.pollMs || 3000, 10));
@@ -359,7 +474,7 @@
       var poll = function(first) {
         RemoteDB.pollServer(options, first).catch(function(err) {
           RemoteDB.customServerConnected = false;
-          RemoteDB.connected = RemoteDB.firebaseConnected || RemoteDB.customServerConnected;
+          RemoteDB.connected = RemoteDB.firebaseConnected || RemoteDB.firebaseRestConnected || RemoteDB.customServerConnected;
           RemoteDB._emitStatus('⚠️ REST 서버 읽기 실패', 'warning', err && err.message ? err.message : 'GET endpoint 확인');
         });
       };
@@ -375,7 +490,7 @@
     pollServer: function(options, first) {
       return readCustomServer().then(function(json) {
         RemoteDB.customServerConnected = true;
-        RemoteDB.connected = RemoteDB.firebaseConnected || RemoteDB.customServerConnected;
+        RemoteDB.connected = RemoteDB.firebaseConnected || RemoteDB.firebaseRestConnected || RemoteDB.customServerConnected;
         var envelope = extractEnvelope(json);
         var applied = RemoteDB._applyEnvelope(envelope, first ? 'rest-once' : 'rest-poll');
         if(!applied && !hasBusinessData(envelope.payload)) RemoteDB._seedIfEmpty(options.initialData);
@@ -404,10 +519,19 @@
         jobs.push(Promise.reject(new Error('Firebase RemoteDB is not connected')));
       }
 
+      if(!this.ref && firebaseRestEnabled()) {
+        jobs.push(firebaseRestRequest('PATCH', '', payload).then(function(res) {
+          RemoteDB.firebaseRestConnected = true;
+          RemoteDB.connected = RemoteDB.firebaseConnected || RemoteDB.firebaseRestConnected || RemoteDB.customServerConnected;
+          RemoteDB._emitStatus('🟢 Firebase REST 서버 DB 저장 완료', 'online', '업로드 ' + nowText());
+          return RemoteDB.pushEvent('full-db-save', { counts: countPayload(data), meta: meta }, { quiet: true });
+        }));
+      }
+
       if(customServerEnabled()) {
         jobs.push(requestCustomServer('full-db-save', { payload: data, meta: meta }).then(function(res) {
           RemoteDB.customServerConnected = true;
-          RemoteDB.connected = RemoteDB.firebaseConnected || RemoteDB.customServerConnected;
+          RemoteDB.connected = RemoteDB.firebaseConnected || RemoteDB.firebaseRestConnected || RemoteDB.customServerConnected;
           RemoteDB._emitStatus('🟣 REST 서버 DB 저장 완료', 'online', 'POST ' + nowText());
           return res;
         }).catch(function(err) {
@@ -456,6 +580,10 @@
         var key = safeKey((data && data.formId) || kind || 'input');
         if(kind === 'draft') jobs.push(this.inputRef.child('drafts/' + key).set(record));
         else jobs.push(this.inputRef.child('events').push(record));
+      } else if(firebaseRestEnabled()) {
+        var restKey = safeKey((data && data.formId) || kind || 'input');
+        var restPath = '_clientInputs/' + safeKey(this.clientId) + (kind === 'draft' ? '/drafts/' + restKey : '/events/' + firebaseRestPushKey());
+        jobs.push(firebaseRestRequest('PUT', restPath, record));
       } else if(firebaseEnabled()) {
         jobs.push(Promise.reject(new Error('Firebase RemoteDB is not connected')));
       }
@@ -484,6 +612,7 @@
       };
       var jobs = [];
       if(this.logRef) jobs.push(this.logRef.push(record));
+      else if(firebaseRestEnabled()) jobs.push(firebaseRestRequest('PUT', '_changeLog/' + firebaseRestPushKey(), record));
       else if(firebaseEnabled()) jobs.push(Promise.reject(new Error('Firebase RemoteDB is not connected')));
       if(customServerEnabled()) {
         jobs.push(requestCustomServer('event-' + eventName, record, options).catch(function(err) {
@@ -496,6 +625,7 @@
 
     fetchOnce: function() {
       if(this.ref) return this.ref.once('value').then(function(snapshot) { return snapshot.val(); });
+      if(firebaseRestEnabled()) return firebaseRestRequest('GET', '', undefined);
       if(customServerEnabled()) return readCustomServer();
       return Promise.reject(new Error('RemoteDB is not connected'));
     },
